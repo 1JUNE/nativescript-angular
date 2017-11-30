@@ -11,6 +11,8 @@
 	(factory());
 }(this, (function () { 'use strict';
 
+var profile = require("tns-core-modules/profiling").profile;
+
 /**
  * @license
  * Copyright Google Inc. All Rights Reserved.
@@ -116,7 +118,7 @@ var Zone$1 = (function (global) {
                 return zone.runGuarded(_callback, this, arguments, source);
             };
         };
-        Zone.prototype.run = function (callback, applyThis, applyArgs, source) {
+        Zone.prototype.run = profile('"zone-nativescript".Zone.run', function (callback, applyThis, applyArgs, source) {
             if (applyThis === void 0) { applyThis = undefined; }
             if (applyArgs === void 0) { applyArgs = null; }
             if (source === void 0) { source = null; }
@@ -127,7 +129,7 @@ var Zone$1 = (function (global) {
             finally {
                 _currentZoneFrame = _currentZoneFrame.parent;
             }
-        };
+        });
         Zone.prototype.runGuarded = function (callback, applyThis, applyArgs, source) {
             if (applyThis === void 0) { applyThis = null; }
             if (applyArgs === void 0) { applyArgs = null; }
@@ -581,7 +583,7 @@ var Zone$1 = (function (global) {
         catch (err) {
         }
     }
-    function drainMicroTaskQueue() {
+    const drainMicroTaskQueue = profile('"zone-nativescript".drainMicrotaskQueue', function drainMicroTaskQueue() {
         if (!_isDrainingMicrotaskQueue) {
             _isDrainingMicrotaskQueue = true;
             while (_microTaskQueue.length) {
@@ -615,7 +617,8 @@ var Zone$1 = (function (global) {
             }
             _isDrainingMicrotaskQueue = false;
         }
-    }
+    });
+    Zone.drainMicroTaskQueue = drainMicroTaskQueue;
     function isThenable(value) {
         return value && value.then;
     }
@@ -1648,7 +1651,7 @@ function patchTimer(window, setName, cancelName, nameSuffix) {
         return clearNative(task.data.handleId);
     }
     setNative =
-        patchMethod(window, setName, function (delegate) { return function (self, args) {
+        patchMethod(window, setName, profile('"zone-nativescript" set ' + setName + ' patched', function (delegate) { return function (self, args) {
             if (typeof args[0] === 'function') {
                 var zone = Zone.current;
                 var options = {
@@ -1676,9 +1679,9 @@ function patchTimer(window, setName, cancelName, nameSuffix) {
                 // cause an error by calling it directly.
                 return delegate.apply(window, args);
             }
-        }; });
+        }; }));
     clearNative =
-        patchMethod(window, cancelName, function (delegate) { return function (self, args) {
+        patchMethod(window, cancelName, profile('"zone-nativescript" clear ' + setName + ' patched', function (delegate) { return function (self, args) {
             var task = typeof args[0] === 'number' ? tasksByHandleId[args[0]] : args[0];
             if (task && typeof task.type === 'string') {
                 if (task.state !== 'notScheduled' &&
@@ -1691,7 +1694,7 @@ function patchTimer(window, setName, cancelName, nameSuffix) {
                 // cause an error by calling it directly.
                 delegate.apply(window, args);
             }
-        }; });
+        }; }));
 }
 
 /**
